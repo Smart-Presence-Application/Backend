@@ -1,7 +1,5 @@
-import os
-import sys
-
 from django.apps import AppConfig
+from django.db.models.signals import post_migrate
 
 
 class AccountsConfig(AppConfig):
@@ -12,22 +10,24 @@ class AccountsConfig(AppConfig):
     def ready(self):
         import accounts.signals  # noqa: F401
 
-        if self._should_bootstrap_superuser():
-            from accounts.bootstrap import create_default_superuser
+        post_migrate.connect(
+            _bootstrap_superuser,
+            sender=self,
+            dispatch_uid="accounts.bootstrap_superuser",
+        )
 
-            create_default_superuser()
 
-    @staticmethod
-    def _should_bootstrap_superuser() -> bool:
-        """
-        True only on a real server start, never for management commands.
+def _bootstrap_superuser(sender, using="default", verbosity=1, **kwargs):
+    """
+    Create the default superuser after `migrate`.
 
-        Under runserver only the autoreloader's child (RUN_MAIN set) runs it,
-        so it happens once. WSGI/ASGI servers have no command name at all.
-        """
-        management_command = sys.argv[1] if len(sys.argv) > 1 else ""
+    post_migrate fires on every `migrate` run (even with nothing to apply),
+    so `pip install -r requirements.txt && python manage.py migrate` is
+    enough to provision the account on a fresh deploy.
+    """
+    from accounts.bootstrap import create_default_superuser
 
-        if management_command == "runserver":
-            return os.environ.get("RUN_MAIN") == "true"
+    user = create_default_superuser(using=using)
 
-        return management_command == ""
+    if user is not None and verbosity >= 1:
+        print(f"  Created default superuser {user.email}.")
