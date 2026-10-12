@@ -1,0 +1,248 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SmartPresence Account Update</title>
+</head>
+
+<body style="
+  margin: 0;
+  padding: 0;
+  background-color: #f4faf6;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #111714;
+">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+    border="0" style="background-color: #f4faf6;">
+    <tr>
+      <td align="center" style="padding: 36px 16px;">
+
+        <table role="presentation" width="100%" cellspacing="0"
+          cellpadding="0" border="0" style="
+            max-width: 600px;
+            background-color: #ffffff;
+            border: 1px solid #e1eee6;
+            border-radius: 20px;
+            overflow: hidden;
+          ">
+
+          <!-- Green accent -->
+          <tr>
+            <td style="
+              height: 6px;
+              background-color: #008f4c;
+              font-size: 0;
+            ">&nbsp;</td>
+          </tr>
+
+          <!-- Centered logo -->
+          <tr>
+            <td align="center" style="padding: 32px 24px 24px;">
+              <img src="cid:smartpresence-logo" width="240" height="43" alt="SmartPresence"
+                  style="display: block; width: 240px; height: auto; max-width: 100%; border: 0; outline: none; text-decoration: none;" />
+
+              <p style="
+                margin: 12px 0 0;
+                color: #718078;
+                font-size: 13px;
+                line-height: 20px;
+              ">
+                AI-powered school attendance management
+              </p>
+            </td>
+          </tr>
+
+          <!-- Status heading -->
+          <tr>
+            <td style="padding: 0 28px;">
+              <table role="presentation" width="100%" cellspacing="0"
+                cellpadding="0" border="0" style="
+                  background-color: #eaf8ef;
+                  border: 1px solid #c9ecd6;
+                  border-radius: 14px;
+                ">
+                <tr>
+                  <td align="center" style="padding: 24px 16px;">
+                    <p style="
+                      margin: 0 0 10px;
+                      color: #008f4c;
+                      font-size: 12px;
+                      font-weight: bold;
+                      letter-spacing: 1.5px;
+                      text-transform: uppercase;
+                    ">
+                      ACCOUNT NOTIFICATION
+                    </p>
+
+                    <h1 style="
+                      margin: 0;
+                      color: #111714;
+                      font-size: 26px;
+                      line-height: 35px;
+                    ">
+                      Account Status Updated
+                    </h1>
+
+                    <p style="
+                      margin: 10px 0 0;
+                      color: #53635a;
+                      font-size: 14px;
+                      line-height: 22px;
+                    ">
+                      There has been an update to your account.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Main message -->
+          <tr>
+            <td style="
+              padding: 28px 32px 20px;
+              color: #536158;
+              font-size: 15px;
+              line-height: 25px;
+            ">
+              <p style="margin: 0 0 16px;">
+                Hello <strong style="color: #111714;">{{ user.name }}</strong>,
+              </p>
+
+              <p style="margin: 0;">
+                This is to inform you that your SmartPresence account status
+                has been updated.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Dynamic status -->
+          <tr>
+            <td style="padding: 0 32px 24px;">
+              <table role="presentation" width="100%" cellspacing="0"
+                cellpadding="0" border="0" style="
+                  background-color: #f8fbf9;
+                  border: 1px solid #e1ebe4;
+                  border-radius: 12px;
+                ">
+                <tr>
+                  <td style="padding: 20px;">
+                    <p style="
+                      margin: 0 0 10px;
+                      color: #718078;
+                      font-size: 12px;
+                      font-weight: bold;
+                      text-transform: uppercase;
+                      letter-spacing: 0.8px;
+                    ">
+                      Current account status
+                    </p>
+
+                    <span style="
+                      display: inline-block;
+                      padding: 8px 16px;
+                      background-color: #ffebeb; 
+                      border: 1px solid #fbc4c4; 
+                      border-radius: 30px; 
+                      color: #d93838;
+                      font-size: 14px;
+                      font-weight: bold;
+                    ">
+                      Deactivated
+                    </span>
+
+                    {% if changed_by %}
+                    <p style="
+                      margin: 20px 0 5px;
+                      color: #718078;
+                      font-size: 12px;
+                      font-weight: bold;
+                      text-transform: uppercase;
+                      letter-spacing: 0.8px;
+                    ">
+                      Updated by
+                    </p>
+
+                    <p style="
+                      margin: 0;
+                      color: #111714;
+                      font-size: 14px;
+                      font-weight: bold;
+                      word-break: break-word;
+                    ">
+                      {{ changed_by.email }}
+                    </p>
+                    {% endif %}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Closing -->
+          <tr>
+            <td style="
+              padding: 0 32px 30px;
+              color: #536158;
+              font-size: 14px;
+              line-height: 23px;
+            ">
+              <p style="margin: 0 0 6px;">
+                If you have questions about this change, please contact
+                your school administrator.
+              </p>
+
+              <p style="
+                margin: 18px 0 0;
+                color: #111714;
+                font-weight: bold;
+              ">
+                Team SmartPresence
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="
+              padding: 22px 20px;
+              background-color: #f2f8f4;
+              border-top: 1px solid #e1ebe4;
+            ">
+              <p style="
+                margin: 0 0 7px;
+                color: #008f4c;
+                font-size: 16px;
+                font-weight: bold;
+              ">
+                SmartPresence
+              </p>
+
+              <p style="
+                margin: 0;
+                color: #6c7970;
+                font-size: 12px;
+                line-height: 20px;
+              ">
+                &copy; {% now "Y" %} SmartPresence. All rights are reserved.
+              </p>
+
+              <p style="
+                margin: 8px 0 0;
+                color: #9aa49d;
+                font-size: 11px;
+                line-height: 18px;
+              ">
+                Intelligent attendance. Simplified school management.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

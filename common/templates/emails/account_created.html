@@ -1,0 +1,322 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Welcome to SmartPresence</title>
+</head>
+
+<body style="
+  margin: 0;
+  padding: 0;
+  background-color: #f4faf6;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #111714;
+">
+
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+    border="0" style="background-color: #f4faf6;">
+    <tr>
+      <td align="center" style="padding: 36px 16px;">
+
+        <!-- Email container -->
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0"
+          border="0" style="
+            max-width: 600px;
+            background-color: #ffffff;
+            border: 1px solid #e1eee6;
+            border-radius: 20px;
+            overflow: hidden;
+          ">
+
+          <!-- Top accent -->
+          <tr>
+            <td style="
+              height: 6px;
+              background-color: #008f4c;
+              font-size: 0;
+              line-height: 0;
+            ">&nbsp;</td>
+          </tr>
+
+          <!-- Centered logo -->
+          <tr>
+            <td align="center" style="padding: 32px 24px 24px;">
+              <a href="{{ login_url|default:'#' }}" style="display: inline-block; text-decoration: none;">
+                <img src="cid:smartpresence-logo" width="240" height="43" alt="SmartPresence"
+                  style="display: block; width: 240px; height: auto; max-width: 100%; border: 0; outline: none; text-decoration: none;" />
+              </a>
+
+              <p style="
+                margin: 14px 0 0;
+                color: #66746b;
+                font-size: 13px;
+                line-height: 20px;
+              ">
+                AI-powered school attendance management
+              </p>
+            </td>
+          </tr>
+
+          <!-- Welcome banner -->
+          <tr>
+            <td style="padding: 0 28px;">
+              <table role="presentation" width="100%" cellspacing="0"
+                cellpadding="0" border="0" style="
+                  background-color: #eaf8ef;
+                  border: 1px solid #c9ecd6;
+                  border-radius: 14px;
+                ">
+                <tr>
+                  <td align="center" style="padding: 22px 16px;">
+                    <p style="
+                      margin: 0 0 8px;
+                      color: #008f4c;
+                      font-size: 12px;
+                      font-weight: bold;
+                      letter-spacing: 1.5px;
+                      text-transform: uppercase;
+                    ">
+                      ACCOUNT ACTIVATED
+                    </p>
+
+                    <h1 style="
+                      margin: 0;
+                      color: #101713;
+                      font-size: 27px;
+                      line-height: 36px;
+                      font-weight: 800;
+                    ">
+                      Welcome to<br />
+                      SmartPresence!
+                    </h1>
+
+                    <p style="
+                      margin: 10px 0 0;
+                      color: #53635a;
+                      font-size: 14px;
+                      line-height: 22px;
+                    ">
+                      Your account is ready. Let's get started.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Main content -->
+          <tr>
+            <td style="
+              padding: 28px 32px 12px;
+              font-size: 15px;
+              line-height: 25px;
+              color: #4d5b52;
+            ">
+              <p style="margin: 0 0 16px;">
+                Hello <strong style="color: #111714;">
+                  {{ name|default:user.name }}
+                </strong>,
+              </p>
+
+              <p style="margin: 0 0 20px;">
+                Your SmartPresence account has been successfully created
+                and activated. You can now sign in and access your
+                account using the credentials provided below.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Account details -->
+          <tr>
+            <td style="padding: 0 32px 24px;">
+              <table role="presentation" width="100%" cellspacing="0"
+                cellpadding="0" border="0" style="
+                  background-color: #f8fbf9;
+                  border: 1px solid #e1ebe4;
+                  border-radius: 12px;
+                ">
+                <tr>
+                  <td style="
+                    padding: 18px 20px;
+                    border-bottom: 1px solid #e1ebe4;
+                  ">
+                    <p style="
+                      margin: 0 0 5px;
+                      color: #748178;
+                      font-size: 12px;
+                      font-weight: bold;
+                      text-transform: uppercase;
+                      letter-spacing: 0.7px;
+                    ">Registered email</p>
+
+                    <p style="
+                      margin: 0;
+                      color: #111714;
+                      font-size: 15px;
+                      font-weight: bold;
+                      word-break: break-word;
+                    ">
+                      {{ email|default:user.email }}
+                    </p>
+                  </td>
+                </tr>
+
+                {% if temporary_password or password %}
+                <tr>
+                  <td style="padding: 18px 20px;">
+                    <p style="
+                      margin: 0 0 5px;
+                      color: #748178;
+                      font-size: 12px;
+                      font-weight: bold;
+                      text-transform: uppercase;
+                      letter-spacing: 0.7px;
+                    ">Temporary password</p>
+
+                    <p style="
+                      margin: 0;
+                      color: #111714;
+                      font-size: 15px;
+                      font-weight: bold;
+                      word-break: break-word;
+                    ">
+                      {{ temporary_password|default:password }}
+                    </p>
+                  </td>
+                </tr>
+                {% endif %}
+              </table>
+            </td>
+          </tr>
+
+          <!-- Login CTA -->
+          {% if login_url %}
+          <tr>
+            <td align="center" style="padding: 0 32px 28px;">
+              <table role="presentation" cellspacing="0" cellpadding="0"
+                border="0">
+                <tr>
+                  <td align="center" bgcolor="#008f4c"
+                    style="border-radius: 30px;">
+                    <a href="{{ login_url }}" style="
+                      display: inline-block;
+                      padding: 15px 30px;
+                      color: #ffffff;
+                      background-color: #008f4c;
+                      border-radius: 30px;
+                      text-decoration: none;
+                      font-size: 15px;
+                      font-weight: bold;
+                    ">
+                      Login to SmartPresence &nbsp; &#8594;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="
+                margin: 14px 0 0;
+                color: #77837b;
+                font-size: 12px;
+                line-height: 20px;
+              ">
+                Click the button above to access your account.
+              </p>
+            </td>
+          </tr>
+          {% endif %}
+
+          <!-- Security notice -->
+          {% if temporary_password or password %}
+          <tr>
+            <td style="padding: 0 32px 28px;">
+              <table role="presentation" width="100%" cellspacing="0"
+                cellpadding="0" border="0" style="
+                  background-color: #fff9eb;
+                  border: 1px solid #f5dfad;
+                  border-radius: 12px;
+                ">
+                <tr>
+                  <td style="
+                    padding: 16px 18px;
+                    color: #805b16;
+                    font-size: 13px;
+                    line-height: 21px;
+                  ">
+                    <strong>Important security notice</strong>
+                    <p style="margin: 6px 0 0;">
+                      Please change your temporary password immediately
+                      after signing in. Never share your password with
+                      anyone.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          {% endif %}
+
+          <!-- Closing -->
+          <tr>
+            <td style="
+              padding: 0 32px 30px;
+              color: #536158;
+              font-size: 14px;
+              line-height: 23px;
+            ">
+              <p style="margin: 0 0 6px;">
+                We're glad to have you on board!
+              </p>
+              <p style="margin: 0; color: #111714; font-weight: bold;">
+                Team SmartPresence
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="
+              padding: 22px 20px;
+              background-color: #f2f8f4;
+              border-top: 1px solid #e1ebe4;
+            ">
+              <p style="
+                margin: 0 0 7px;
+                color: #008f4c;
+                font-size: 16px;
+                font-weight: bold;
+              ">
+                SmartPresence
+              </p>
+
+              <p style="
+                margin: 0;
+                color: #6c7970;
+                font-size: 12px;
+                line-height: 20px;
+              ">
+                &copy; {% now "Y" %} SmartPresence. All rights are reserved.
+              </p>
+
+              <p style="
+                margin: 8px 0 0;
+                color: #9aa49d;
+                font-size: 11px;
+                line-height: 18px;
+              ">
+                Intelligent attendance. Simplified school management.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+        <!-- End email container -->
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
