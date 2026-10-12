@@ -1,0 +1,81 @@
+from django.urls import path
+
+from .views import (
+    MyChildPhotoAPIView,
+    MyChildrenAttendanceAPIView,
+    ParentBulkUploadAPIView,
+    MyNotificationsAPIView,
+    MyNotificationsReadAPIView,
+    MyProfileAPIView,
+    MyUnreadCountAPIView,
+    ParentDetailAPIView,
+    ParentListCreateAPIView,
+    ParentLoginAPIView,
+    ParentResetPasswordAPIView,
+    ParentStudentUnlinkAPIView,
+)
+
+app_name = "parents"
+
+urlpatterns = [
+    path(
+        "login/",
+        ParentLoginAPIView.as_view(),
+        name="login",
+    ),
+    path(
+        "me/",
+        MyProfileAPIView.as_view(),
+        name="me",
+    ),
+    path(
+        "me/attendance/",
+        MyChildrenAttendanceAPIView.as_view(),
+        name="me-attendance",
+    ),
+    path(
+        "me/students/<int:student_pk>/photo/",
+        MyChildPhotoAPIView.as_view(),
+        name="me-student-photo",
+    ),
+    path(
+        "me/notifications/",
+        MyNotificationsAPIView.as_view(),
+        name="me-notifications",
+    ),
+    path(
+        "me/notifications/unread-count/",
+        MyUnreadCountAPIView.as_view(),
+        name="me-notifications-unread-count",
+    ),
+    path(
+        "me/notifications/read/",
+        MyNotificationsReadAPIView.as_view(),
+        name="me-notifications-read",
+    ),
+    path(
+        "",
+        ParentListCreateAPIView.as_view(),
+        name="parent-list-create",
+    ),
+    path(
+        "bulk-upload/",
+        ParentBulkUploadAPIView.as_view(),
+        name="parent-bulk-upload",
+    ),
+    path(
+        "<int:pk>/",
+        ParentDetailAPIView.as_view(),
+        name="parent-detail",
+    ),
+    path(
+        "<int:pk>/reset-password/",
+        ParentResetPasswordAPIView.as_view(),
+        name="parent-reset-password",
+    ),
+    path(
+        "<int:pk>/students/<int:student_pk>/",
+        ParentStudentUnlinkAPIView.as_view(),
+        name="parent-student-unlink",
+    ),
+]
