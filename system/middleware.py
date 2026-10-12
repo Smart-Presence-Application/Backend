@@ -2,8 +2,8 @@
 Maintenance mode (503 for everyone but Super Admins) and the activity log.
 
 ``OPEN_PATHS`` stay reachable during maintenance so a Super Admin can
-sign in and switch it off, apps can poll whether it is over, and the
-public website stays up.
+sign in and switch it off, apps can poll whether it is over, health
+probes keep passing, and the public website stays up.
 """
 
 import time
@@ -17,6 +17,7 @@ from .activity import login_identifier, record, should_log
 from .services import maintenance_state
 
 OPEN_PATHS = (
+    "/api/system/health/",
     "/api/system/status/",
     "/api/auth/login/",
     "/api/auth/logout/",

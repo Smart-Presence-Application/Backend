@@ -13,7 +13,7 @@ Built with Django 5.2, Django REST Framework and PostgreSQL.
 - **Teacher attendance**: photo check-in/check-out, admin verification, per-school settings and summaries.
 - **Notifications**: messages with attachments, a per-user inbox, and Web Push (VAPID).
 - **Reports**: CSV/Excel exports.
-- **System**: maintenance mode (503 for everyone except Super Admins), activity logs, rate limiting, request IDs.
+- **System**: public health check (`GET /api/system/health/`), maintenance mode (503 for everyone except Super Admins), activity logs, rate limiting, request IDs.
 - **Website**: public testimonials, partners and a contact form with an optional Cloudflare Turnstile check.
 
 ## Tech stack

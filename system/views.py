@@ -1,10 +1,14 @@
+import time
+
+from django.core.cache import cache
+from django.db import connection
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from common.pagination import StandardResultsPagination
 from common.permissions import IsSuperAdmin
-from common.responses import success_response, updated_response
+from common.responses import error_response, success_response, updated_response
 
 from . import services
 from .filters import ActivityLogFilter
@@ -28,6 +32,55 @@ class SystemStatusAPIView(generics.GenericAPIView):
             "Status fetched successfully.",
             {"maintenance": state["enabled"], "message": state["message"] if state["enabled"] else ""},
         )
+
+
+def _check(probe) -> dict:
+    started = time.monotonic()
+
+    try:
+        probe()
+    except Exception as exc:
+        return {"ok": False, "error": exc.__class__.__name__}
+
+    return {"ok": True, "latency_ms": round((time.monotonic() - started) * 1000, 1)}
+
+
+def _probe_database():
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT 1")
+
+
+def _probe_cache():
+    cache.set("system:health", "ok", 5)
+
+    if cache.get("system:health") != "ok":
+        raise RuntimeError("cache read-back failed")
+
+
+class HealthAPIView(generics.GenericAPIView):
+    """
+    Public liveness/readiness probe for load balancers and uptime monitors:
+    200 when the database and cache answer, 503 otherwise. Stays reachable
+    during maintenance and reports whether it is on.
+    """
+
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    throttle_classes = []
+
+    def get(self, request, *args, **kwargs):
+        checks = {"database": _check(_probe_database), "cache": _check(_probe_cache)}
+        healthy = all(check["ok"] for check in checks.values())
+        data = {
+            "status": "ok" if healthy else "unhealthy",
+            "maintenance": services.maintenance_state()["enabled"] if checks["database"]["ok"] else None,
+            "checks": checks,
+        }
+
+        if not healthy:
+            return error_response("Service is unhealthy.", data, status_code=503)
+
+        return success_response("Service is healthy.", data)
 
 
 class MaintenanceAPIView(generics.GenericAPIView):
