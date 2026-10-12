@@ -1,0 +1,7 @@
+__pycache__/
+.env
+venv/
+.env.prod
+.env.production
+.claude/
+media/
