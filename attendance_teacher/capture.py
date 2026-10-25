@@ -27,7 +27,9 @@ from django.utils import timezone
 from PIL import Image, UnidentifiedImageError
 
 MAX_CAPTURE_SKEW_SECONDS = config("MAX_CAPTURE_SKEW_SECONDS", default=120, cast=int)
-OFFLINE_MAX_CAPTURE_HOURS = config("OFFLINE_MAX_CAPTURE_HOURS", default=12, cast=int)
+# Schools with patchy internet can stay offline for a day or more; the
+# admin reviews every offline day before verifying it.
+OFFLINE_MAX_CAPTURE_HOURS = config("OFFLINE_MAX_CAPTURE_HOURS", default=72, cast=int)
 
 EXIF_IFD = 0x8769
 EXIF_DATETIME_ORIGINAL = 36867

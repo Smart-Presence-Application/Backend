@@ -31,8 +31,14 @@ def generate_parent_password(name: str) -> str:
 
 def _set_generated_password(parent: Parent) -> str:
     """Give the parent a new system password, flagged so the signal keeps it readable for staff."""
-    password = generate_parent_password(parent.user.name)
+    return _set_staff_password(parent, generate_parent_password(parent.user.name))
 
+
+def _set_staff_password(parent: Parent, password: str) -> str:
+    """
+    Set a password staff hand to the parent. Like a generated one it stays
+    readable for staff until the parent replaces it with their own.
+    """
     user = parent.user
     user.set_password(password)
     user._keep_initial_password = True
@@ -149,6 +155,19 @@ def reset_parent_password(*, parent: Parent, actor) -> str:
     )
 
     return password
+
+
+@transaction.atomic
+def set_parent_password(*, parent: Parent, password: str, actor) -> None:
+    """Set a password an admin chose, e.g. when the parent asks for a specific one."""
+
+    _set_staff_password(parent, password)
+
+    logger.info(
+        "Password set for parent %s by user %s",
+        parent.user.phone_number,
+        actor.pk,
+    )
 
 
 @transaction.atomic

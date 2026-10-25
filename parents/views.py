@@ -19,7 +19,7 @@ from common.csv_import import CSVImportError
 from common.ordering import NaturalOrderingFilter
 from common.pagination import StandardResultsPagination
 from common.throttling import LOGIN_THROTTLES
-from common.permissions import IsParent, IsParentManager
+from common.permissions import IsParent, IsParentManager, IsSuperOrSchoolAdmin
 from common.responses import (
     created_response,
     deleted_response,
@@ -51,6 +51,7 @@ from .serializers import (
     ParentNotificationSerializer,
     ParentProfileSerializer,
     ParentSerializer,
+    ParentSetPasswordSerializer,
     ParentUpdateSerializer,
 )
 
@@ -334,6 +335,34 @@ class ParentResetPasswordAPIView(ParentBaseMixin, generics.GenericAPIView):
 
         return updated_response(
             "Parent password reset successfully.",
+            ParentSerializer(self.get_parent_or_404(pk)).data,
+        )
+
+
+class ParentSetPasswordAPIView(ParentBaseMixin, generics.GenericAPIView):
+    """
+    Set a password of the admin's choosing for a parent, as admins can for
+    teachers. School Admins reach only parents of their own school.
+    """
+
+    permission_classes = [IsAuthenticated, IsSuperOrSchoolAdmin]
+    serializer_class = ParentSetPasswordSerializer
+
+    def post(self, request, pk, *args, **kwargs):
+        parent = self.get_parent_or_404(pk)
+
+        serializer = self.get_serializer(data=request.data, context={"target_user": parent.user})
+        if not serializer.is_valid():
+            return error_response("Validation failed.", serializer.errors, status.HTTP_400_BAD_REQUEST)
+
+        services.set_parent_password(
+            parent=parent,
+            password=serializer.validated_data["new_password"],
+            actor=request.user,
+        )
+
+        return updated_response(
+            "Parent password changed successfully.",
             ParentSerializer(self.get_parent_or_404(pk)).data,
         )
 

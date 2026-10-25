@@ -17,6 +17,7 @@ from common.choices import UserRole
 from schools.models import School
 from teachers.models import Teacher
 
+from .capture import OFFLINE_MAX_CAPTURE_HOURS
 from .models import (
     TeacherAttendance,
     TeacherAttendanceSettings,
@@ -41,6 +42,10 @@ def camera_photo(exif_taken_at=None):
 
     image.save(buffer, format="JPEG", **kwargs)
     return SimpleUploadedFile("cam.jpg", buffer.getvalue(), content_type="image/jpeg")
+
+
+def jpeg(data):
+    return SimpleUploadedFile("cam.jpg", data, content_type="image/jpeg")
 
 
 def make_user(email, role):
@@ -115,7 +120,9 @@ class TeacherAttendanceTests(TestCase):
     def test_offline_capture_limits(self):
         """Offline photos must be recent and match their EXIF time; online, a 2-hour-old photo is refused."""
         now = at(23, 0)
-        too_old = self.capture("check-in", now, captured_at=now - timedelta(hours=13), offline=True)
+        too_old = self.capture(
+            "check-in", now, captured_at=now - timedelta(hours=OFFLINE_MAX_CAPTURE_HOURS + 1), offline=True,
+        )
         self.assertEqual(too_old.status_code, 400)
         self.assertIn("captured_at", too_old.data["errors"])
 
@@ -173,6 +180,41 @@ class TeacherAttendanceTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("image", response.data["errors"])
+
+    def test_resending_an_uploaded_photo_succeeds(self):
+        """The reply to an offline upload was lost, so the app sends the same photo again."""
+        data = camera_photo().read()
+        first = self.capture("check-in", at(16), captured_at=at(9), offline=True, image=jpeg(data))
+        self.assertEqual(first.status_code, 201, first.data)
+
+        again = self.capture("check-in", at(16, 5), captured_at=at(9), offline=True, image=jpeg(data))
+        self.assertEqual(again.status_code, 201, again.data)
+        self.assertEqual(again.data["data"]["id"], first.data["data"]["id"])
+
+        out = camera_photo().read()
+        checked_out = self.capture("check-out", at(16), captured_at=at(15), offline=True, image=jpeg(out))
+        self.assertEqual(checked_out.status_code, 201, checked_out.data)
+        out_again = self.capture("check-out", at(16, 5), captured_at=at(15), offline=True, image=jpeg(out))
+        self.assertEqual(out_again.status_code, 201, out_again.data)
+
+        attendance = TeacherAttendance.objects.get()
+        self.assertEqual(attendance.check_out_captured_at, at(15))
+
+    def test_another_teachers_photo_is_still_refused(self):
+        data = camera_photo().read()
+        self.capture("check-in", at(9), image=jpeg(data))
+
+        other = APIClient()
+        other.force_authenticate(self.other_user)
+        response = self.capture("check-in", at(9), image=jpeg(data), client=other)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("image", response.data["errors"])
+
+    def test_offline_photo_a_day_old_is_accepted(self):
+        """Schools may be without internet for a whole day."""
+        now = at(10)
+        response = self.capture("check-in", now, captured_at=now - timedelta(hours=25), offline=True)
+        self.assertEqual(response.status_code, 201, response.data)
 
     def test_check_out_requires_check_in(self):
         response = self.capture("check-out", at(15))

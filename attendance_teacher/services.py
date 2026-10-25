@@ -68,6 +68,16 @@ def _ensure_unused_image(image_hash: str) -> None:
         raise ValidationError({"image": DUPLICATE_IMAGE_MESSAGE})
 
 
+def _already_recorded(teacher: Teacher, image_hash: str, field: str) -> TeacherAttendance | None:
+    """
+    The teacher's day that already holds this exact photo as its check-in
+    or check-out. An offline upload whose reply was lost on a weak
+    connection is sent again; it must succeed, not be refused as reused.
+    """
+
+    return TeacherAttendance.objects.filter(teacher=teacher, **{field: image_hash}).first()
+
+
 def _capture_moment(captured_at: datetime, offline: bool) -> datetime:
     """
     The time to record: the server's clock online, so a wrong device
@@ -103,15 +113,20 @@ def check_in(
     """
     Record the teacher's school entry as a draft, for the day the photo
     was taken. A unique constraint catches a double-tap that races past
-    the checks.
+    the checks. Sending the same photo again returns the day it already
+    created.
     """
+
+    image_hash = image_sha256(image)
+    replayed = _already_recorded(teacher, image_hash, "check_in_image_hash")
+    if replayed is not None:
+        return replayed
 
     validate_live_capture(file_obj=image, captured_at=captured_at, now=timezone.now(), offline=offline)
 
     now = _capture_moment(captured_at, offline)
     today = timezone.localdate(now)
 
-    image_hash = image_sha256(image)
     _ensure_unused_image(image_hash)
 
     if TeacherAttendance.objects.filter(teacher=teacher, date=today).exists():
@@ -149,12 +164,16 @@ def check_out(
     was taken.
     """
 
+    image_hash = image_sha256(image)
+    replayed = _already_recorded(teacher, image_hash, "check_out_image_hash")
+    if replayed is not None:
+        return replayed
+
     validate_live_capture(file_obj=image, captured_at=captured_at, now=timezone.now(), offline=offline)
 
     now = _capture_moment(captured_at, offline)
     today = timezone.localdate(now)
 
-    image_hash = image_sha256(image)
     _ensure_unused_image(image_hash)
 
     with transaction.atomic():

@@ -186,6 +186,61 @@ class ParentTests(TestCase):
         self.assertTrue(re.fullmatch(r"Atharva@\d{4}", new_password))
         self.assertEqual(self.login("9876543210", new_password)[1].status_code, 200)
 
+    def set_password(self, client, parent, password="Picked-by-admin-77", confirm=None):
+        return client.post(
+            reverse("parents:parent-change-password", args=[parent.pk]),
+            {"new_password": password, "confirm_new_password": confirm or password},
+            format="json",
+        )
+
+    def test_school_admin_sets_a_parent_password(self):
+        """As for teachers, an admin can set a parent's password; it stays shareable until the parent changes it."""
+        self.create_parent(self.teacher_client, student_id="STU1")
+        parent = Parent.objects.get()
+
+        response = self.set_password(self.admin_client, parent)
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data["data"]["initial_password"], "Picked-by-admin-77")
+        self.assertFalse(response.data["data"]["password_changed"])
+
+        _, login = self.login("9876543210", "Picked-by-admin-77")
+        self.assertEqual(login.status_code, 200, login.data)
+        self.assertTrue(login.data["data"]["must_change_password"])
+
+        self.assertEqual(self.set_password(self.super_client, parent, "Super-picked-88").status_code, 200)
+        self.assertEqual(self.login("9876543210", "Super-picked-88")[1].status_code, 200)
+
+    def test_parent_password_is_validated(self):
+        self.create_parent(self.teacher_client, student_id="STU1")
+        parent = Parent.objects.get()
+
+        mismatch = self.set_password(self.admin_client, parent, confirm="Something-else-77")
+        self.assertEqual(mismatch.status_code, 400)
+        self.assertIn("confirm_new_password", mismatch.data["errors"])
+
+        weak = self.set_password(self.admin_client, parent, "123")
+        self.assertEqual(weak.status_code, 400)
+        self.assertIn("new_password", weak.data["errors"])
+
+    def test_only_admins_of_the_school_set_parent_passwords(self):
+        self.create_parent(self.teacher_client, student_id="STU1")
+        parent = Parent.objects.get()
+
+        self.assertEqual(self.set_password(self.teacher_client, parent).status_code, 403)
+
+        other_admin = make_user("other@x.com", UserRole.SCHOOL_ADMIN)
+        School.objects.create(
+            name="Other", code="OTH", email="o@x.com", phone="9999999999",
+            address="a", city="c", state="s", country="in", pincode="1",
+            admin=other_admin,
+        )
+        other_client = APIClient()
+        other_client.force_authenticate(other_admin)
+        self.assertEqual(self.set_password(other_client, parent).status_code, 404)
+
+        parent_client, _ = self.login("9876543210", parent.initial_password)
+        self.assertEqual(self.set_password(parent_client, parent).status_code, 403)
+
     def test_unlinking_last_child_deletes_parent(self):
         self.create_parent(self.teacher_client, student_id="STU1")
         parent = Parent.objects.get()

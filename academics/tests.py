@@ -1,4 +1,5 @@
 from datetime import date
+from unittest import mock
 
 from django.test import TestCase
 from django.urls import reverse
@@ -79,6 +80,21 @@ class SchoolCalendarTests(TestCase):
             )
             self.assertEqual(by_date["2026-10-20"]["title"], "Dussehra")
             self.assertEqual(by_date["2026-10-15"]["remarks"], "Sports day")
+
+    def test_working_days_are_counted_for_the_month_and_the_year(self):
+        """Working and event days count; a holiday on a working day does not."""
+        WorkingDay.objects.create(school=self.school_a, academic_year=self.year, date=date(2026, 10, 20), day_type=DayType.WORKING)
+        WorkingDay.objects.create(school=self.school_a, academic_year=self.year, date=date(2026, 7, 1), day_type=DayType.WORKING)
+        WorkingDay.objects.create(school=self.school_a, academic_year=self.year, date=date(2027, 2, 1), day_type=DayType.WORKING)
+
+        with mock.patch("django.utils.timezone.localdate", return_value=date(2026, 10, 10)):
+            totals = self.get(self.teacher).data["data"]["working_days"]
+
+        self.assertEqual(totals, {"in_range": 2, "year_total": 4, "year_to_date": 2})
+
+    def test_working_days_without_an_academic_year(self):
+        response = self.get(self.admin_a, date_from="2025-01-01", date_to="2025-01-31")
+        self.assertEqual(response.data["data"]["working_days"], {"in_range": 0, "year_total": None, "year_to_date": None})
 
     def test_cannot_read_another_school(self):
         self.assertEqual(self.get(self.teacher, school=self.school_b.id).status_code, 404)

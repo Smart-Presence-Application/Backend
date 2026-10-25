@@ -42,6 +42,17 @@ def rotate_refresh(refresh_token: str) -> dict[str, str]:
 
 
 def set_token_cookie(response, key: str, value: str, max_age: int | None = None) -> None:
+    """
+    Set a JWT cookie that outlives the browser session.
+
+    Without ``max_age`` the cookie would be a session cookie, which mobile
+    browsers drop as soon as the installed app is closed or swiped away
+    from recents, signing the user out. It defaults to the token's own
+    lifetime, so the cookie and the token expire together.
+    """
+    if max_age is None:
+        max_age = _cookie_max_age(key)
+
     response.set_cookie(
         key=key,
         value=value,
@@ -51,6 +62,15 @@ def set_token_cookie(response, key: str, value: str, max_age: int | None = None)
         samesite=settings.JWT_COOKIE_SAMESITE,
         path=settings.JWT_COOKIE_PATH,
     )
+
+
+def _cookie_max_age(key: str) -> int | None:
+    lifetimes = {
+        settings.JWT_ACCESS_COOKIE: settings.SIMPLE_JWT.get("ACCESS_TOKEN_LIFETIME"),
+        settings.JWT_REFRESH_COOKIE: settings.SIMPLE_JWT.get("REFRESH_TOKEN_LIFETIME"),
+    }
+    lifetime = lifetimes.get(key)
+    return int(lifetime.total_seconds()) if lifetime else None
 
 
 def delete_token_cookie(response, key: str) -> None:

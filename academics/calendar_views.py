@@ -6,6 +6,7 @@ and parents see the same calendar (working days, events, holidays and
 weekends) for their own school, without being able to change it.
 """
 
+from django.utils import timezone
 from rest_framework import generics, serializers
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.permissions import IsAuthenticated
@@ -62,13 +63,52 @@ def schools_for(user) -> list[School]:
     return []
 
 
+WORKING_DAY_TYPES = (DayType.WORKING, DayType.EVENT)
+
+
+def count_working_days(school, date_from, date_to) -> int:
+    """
+    Working days (events included, as in ``WorkingDay.is_working_day``)
+    from ``date_from`` to ``date_to``. A holiday on the same date wins,
+    just as it does on the calendar.
+    """
+
+    if date_from > date_to:
+        return 0
+
+    holidays = Holiday.objects.filter(school=school, date__range=(date_from, date_to)).values("date")
+
+    return (
+        WorkingDay.objects.filter(school=school, date__range=(date_from, date_to), day_type__in=WORKING_DAY_TYPES)
+        .exclude(date__in=holidays)
+        .count()
+    )
+
+
+def working_day_totals(school, year, date_from, date_to) -> dict:
+    """
+    Working days in the requested range, and across the academic year:
+    in total and up to today.
+    """
+
+    totals = {"in_range": count_working_days(school, date_from, date_to), "year_total": None, "year_to_date": None}
+
+    if year is not None:
+        today = timezone.localdate()
+        totals["year_total"] = count_working_days(school, year.start_date, year.end_date)
+        totals["year_to_date"] = count_working_days(school, year.start_date, min(today, year.end_date))
+
+    return totals
+
+
 class SchoolCalendarAPIView(generics.GenericAPIView):
     """
     ``GET /academics/calendar/?date_from=&date_to=[&school=]``
 
     Every date in the range that the school has marked, with its type and
     label. A holiday's title labels its date, whatever the working-day
-    row says. Dates with no entry are left out;
+    row says. ``working_days`` counts working days in the range and in
+    the academic year (total and so far). Dates with no entry are left out;
     the school has not set them. Super Admins name the school; parents
     with children in several schools may pick one of them.
     """
@@ -121,6 +161,7 @@ class SchoolCalendarAPIView(generics.GenericAPIView):
                 "academic_year": (
                     {"id": year.id, "name": year.name, "start_date": year.start_date, "end_date": year.end_date} if year else None
                 ),
+                "working_days": working_day_totals(school, year, date_from, date_to),
                 "days": [days[d] for d in sorted(days)],
             },
         )

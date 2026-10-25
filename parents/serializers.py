@@ -1,10 +1,11 @@
 """Serializers for parent APIs."""
 
+from django.contrib.auth import password_validation
 from rest_framework import serializers
 
 from attendance_student.models import AttendanceRecord
 from common.choices import UserRole
-from common.validators import validate_csv_file, validate_phone
+from common.validators import validate_csv_file, validate_password_strength, validate_phone
 from schools.models import School
 from students.serializers import StudentListSerializer
 
@@ -259,4 +260,21 @@ class ParentBulkUploadSerializer(serializers.Serializer):
                 {"school": "This field is required when acting as a Super Admin."}
             )
 
+        return attrs
+
+
+class ParentSetPasswordSerializer(serializers.Serializer):
+    """A password an admin picks for a parent, typed twice."""
+
+    new_password = serializers.CharField(write_only=True, trim_whitespace=False)
+    confirm_new_password = serializers.CharField(write_only=True, trim_whitespace=False)
+
+    def validate_new_password(self, value: str) -> str:
+        validate_password_strength(value)
+        password_validation.validate_password(value, self.context.get("target_user"))
+        return value
+
+    def validate(self, attrs: dict) -> dict:
+        if attrs["new_password"] != attrs["confirm_new_password"]:
+            raise serializers.ValidationError({"confirm_new_password": "New passwords do not match."})
         return attrs

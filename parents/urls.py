@@ -12,6 +12,7 @@ from .views import (
     ParentListCreateAPIView,
     ParentLoginAPIView,
     ParentResetPasswordAPIView,
+    ParentSetPasswordAPIView,
     ParentStudentUnlinkAPIView,
 )
 
@@ -72,6 +73,11 @@ urlpatterns = [
         "<int:pk>/reset-password/",
         ParentResetPasswordAPIView.as_view(),
         name="parent-reset-password",
+    ),
+    path(
+        "<int:pk>/change-password/",
+        ParentSetPasswordAPIView.as_view(),
+        name="parent-change-password",
     ),
     path(
         "<int:pk>/students/<int:student_pk>/",

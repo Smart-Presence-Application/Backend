@@ -52,7 +52,7 @@ Base URL: `/api/`. Roles: **SA** = SUPER_ADMIN, **SCH** = SCHOOL_ADMIN, **T** = 
 | Academics | All `academics/*` (years, activate, classes, sections, class-sections, holidays, working-days, mark-weekends) — must pass `school` on create |
 | Teachers | `GET/POST teachers/`, `POST teachers/bulk-upload/`, `GET/PATCH/PUT/DELETE teachers/{id}/`, `PATCH/POST teachers/{id}/status/`, `POST/DELETE teachers/{id}/class-section/`, `POST teachers/{id}/transfer/` |
 | Students | `GET/POST students/`, `POST students/bulk-upload/`, `GET/PATCH/PUT/DELETE students/{id}/`, `PATCH/POST students/{id}/image/` |
-| Parents (staff) | `GET/POST parents/`, `POST parents/bulk-upload/`, `GET/PATCH/PUT parents/{id}/`, `POST parents/{id}/reset-password/`, `DELETE parents/{id}/students/{student_id}/` |
+| Parents (staff) | `GET/POST parents/`, `POST parents/bulk-upload/`, `GET/PATCH/PUT parents/{id}/`, `POST parents/{id}/reset-password/`, `POST parents/{id}/change-password/`, `DELETE parents/{id}/students/{student_id}/` |
 | Student attendance | `GET attendance/faces/`, `POST attendance/faces/register/`, `POST attendance/faces/register-from-profile/`, `DELETE attendance/faces/{student_id}/`, `POST attendance/verify/`, `GET/POST attendance/sessions/`, `GET/DELETE attendance/sessions/{id}/`, `PATCH/PUT attendance/sessions/{id}/records/`, `POST .../lock/`, `POST .../unlock/` |
 | Teacher attendance | `GET teacher-attendance/records/`, `GET/DELETE .../records/{id}/`, `POST .../records/{id}/verify/`, `GET/PATCH/PUT teacher-attendance/settings/`, `GET teacher-attendance/summary/` |
 | Notifications | `GET/POST notifications/`, `GET/DELETE notifications/{id}/`, `GET notifications/{id}/recipients/`, inbox (below) |
@@ -378,6 +378,11 @@ Adds parents from a CSV, one row per child, exactly like calling `POST /parents/
 #### POST `/parents/{id}/reset-password/` — staff
 Generates a new password and returns it in `initial_password`.
 - **200** `Parent password reset successfully.` · **404**
+
+#### POST `/parents/{id}/change-password/` — SUPER_ADMIN, SCHOOL_ADMIN
+Sets a password the admin chooses, as `auth/users/{id}/change-password/` does for teachers. Like a generated one it stays readable in `initial_password` until the parent changes it, and the parent is asked to change it on next login.
+- Body: `{new_password, confirm_new_password}` (at least 12 characters, a mix of letters, numbers or symbols)
+- **200** `Parent password changed successfully.` → parent · **400** `Validation failed.` → field errors · **403** teachers · **404** parent outside the admin's school
 
 #### DELETE `/parents/{id}/students/{student_pk}/` — staff
 Unlinks the child. The parent is deleted if they have no children left.
