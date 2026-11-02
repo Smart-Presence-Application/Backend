@@ -96,7 +96,7 @@ DATABASES = {
         "PORT": config("DB_PORT"),
         "CONN_MAX_AGE": config("DB_CONN_MAX_AGE", default=60, cast=int),
         "CONN_HEALTH_CHECKS": True,
-        # "OPTIONS": {"sslmode": config("DB_SSLMODE", default="prefer")},
+        "OPTIONS": {"sslmode": config("DB_SSLMODE", default="prefer")},
     }
 }
 
