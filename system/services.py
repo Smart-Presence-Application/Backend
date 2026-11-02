@@ -11,6 +11,8 @@ from .models import MaintenanceSettings
 
 CACHE_KEY = "system:maintenance"
 CACHE_SECONDS = 5
+# The status page's cached service checks, which include the maintenance notice.
+SERVICES_CACHE_KEY = "system:services"
 
 
 def get_settings() -> MaintenanceSettings:
@@ -49,6 +51,6 @@ def set_maintenance(*, actor, is_enabled: bool | None = None, message: str | Non
 
     row.updated_by = actor
     row.save()
-    cache.delete(CACHE_KEY)
+    cache.delete_many([CACHE_KEY, SERVICES_CACHE_KEY])
 
     return row

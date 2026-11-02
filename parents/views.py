@@ -14,6 +14,7 @@ from accounts.serializers import UserSerializer
 from accounts.services import login_user
 from attendance_student.serializers import AIJobSerializer
 from attendance_student.services import has_registered_face, start_student_photo_job
+from common.bulk import BulkIdsSerializer, bulk_delete, bulk_delete_message
 from common.choices import AttendanceStatus
 from common.csv_import import CSVImportError
 from common.ordering import NaturalOrderingFilter
@@ -296,6 +297,28 @@ class ParentBulkUploadAPIView(ParentBaseMixin, generics.GenericAPIView):
             },
         )
 
+
+class ParentBulkDeleteAPIView(ParentBaseMixin, generics.GenericAPIView):
+    """
+    Delete several parents at once. A parent who also has children the
+    actor cannot see keeps their account and is only unlinked from the
+    actor's children (reported under ``unlinked``).
+    """
+
+    serializer_class = BulkIdsSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        result = bulk_delete(
+            queryset=get_parents_visible_to(request.user),
+            ids=serializer.validated_data["ids"],
+            delete=lambda parent: services.delete_parent(parent=parent, actor=request.user),
+            outcomes=("deleted", "unlinked"),
+        )
+
+        return success_response(bulk_delete_message(result, "parent"), result)
 
 class ParentDetailAPIView(ParentBaseMixin, generics.GenericAPIView):
     serializer_class = ParentUpdateSerializer

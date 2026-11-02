@@ -48,11 +48,11 @@ Base URL: `/api/`. Roles: **SA** = SUPER_ADMIN, **SCH** = SCHOOL_ADMIN, **T** = 
 |---|---|
 | Auth/Profile | `POST auth/login/`, `POST auth/logout/`, `POST auth/refresh/`, `GET/PATCH auth/profile/`, `PATCH auth/profile/image/`, `POST auth/profile/change-password/` |
 | Users | `GET auth/users/`, `GET/PATCH auth/users/{id}/`, `POST auth/users/{id}/change-password/`, `PATCH/POST auth/users/{id}/status/`, `POST auth/users/bulk-status/` |
-| Schools | `GET/POST schools/`, `GET/PATCH/DELETE schools/{id}/`, `PATCH schools/{id}/status/` |
+| Schools | `GET/POST schools/`, `POST schools/bulk-delete/`, `GET/PATCH/DELETE schools/{id}/`, `PATCH schools/{id}/status/` |
 | Academics | All `academics/*` (years, activate, classes, sections, class-sections, holidays, working-days, mark-weekends) — must pass `school` on create |
-| Teachers | `GET/POST teachers/`, `POST teachers/bulk-upload/`, `GET/PATCH/PUT/DELETE teachers/{id}/`, `PATCH/POST teachers/{id}/status/`, `POST/DELETE teachers/{id}/class-section/`, `POST teachers/{id}/transfer/` |
-| Students | `GET/POST students/`, `POST students/bulk-upload/`, `GET/PATCH/PUT/DELETE students/{id}/`, `PATCH/POST students/{id}/image/` |
-| Parents (staff) | `GET/POST parents/`, `POST parents/bulk-upload/`, `GET/PATCH/PUT parents/{id}/`, `POST parents/{id}/reset-password/`, `POST parents/{id}/change-password/`, `DELETE parents/{id}/students/{student_id}/` |
+| Teachers | `GET/POST teachers/`, `POST teachers/bulk-upload/`, `POST teachers/bulk-delete/`, `GET/PATCH/PUT/DELETE teachers/{id}/`, `PATCH/POST teachers/{id}/status/`, `POST/DELETE teachers/{id}/class-section/`, `POST teachers/{id}/transfer/` |
+| Students | `GET/POST students/`, `POST students/bulk-upload/`, `POST students/bulk-delete/`, `GET/PATCH/PUT/DELETE students/{id}/`, `PATCH/POST students/{id}/image/` |
+| Parents (staff) | `GET/POST parents/`, `POST parents/bulk-upload/`, `POST parents/bulk-delete/`, `GET/PATCH/PUT parents/{id}/`, `POST parents/{id}/reset-password/`, `POST parents/{id}/change-password/`, `DELETE parents/{id}/students/{student_id}/` |
 | Student attendance | `GET attendance/faces/`, `POST attendance/faces/register/`, `POST attendance/faces/register-from-profile/`, `DELETE attendance/faces/{student_id}/`, `POST attendance/verify/`, `GET/POST attendance/sessions/`, `GET/DELETE attendance/sessions/{id}/`, `PATCH/PUT attendance/sessions/{id}/records/`, `POST .../lock/`, `POST .../unlock/` |
 | Teacher attendance | `GET teacher-attendance/records/`, `GET/DELETE .../records/{id}/`, `POST .../records/{id}/verify/`, `GET/PATCH/PUT teacher-attendance/settings/`, `GET teacher-attendance/summary/` |
 | Notifications | `GET/POST notifications/`, `GET/DELETE notifications/{id}/`, `GET notifications/{id}/recipients/`, inbox (below) |
@@ -68,8 +68,8 @@ Not allowed: `schools/` admin routes (`GET/POST schools/`, `schools/{id}/*`).
 |---|---|
 | Auth/Profile | login, logout, refresh, `auth/profile/*` |
 | Self | `GET teachers/me/` |
-| Students (own section) | `GET/POST students/`, `POST students/bulk-upload/`, `GET/PATCH/PUT/DELETE students/{id}/`, `PATCH/POST students/{id}/image/` |
-| Parents (own section) | `GET/POST parents/`, `POST parents/bulk-upload/`, `GET/PATCH/PUT parents/{id}/`, `POST parents/{id}/reset-password/`, `DELETE parents/{id}/students/{student_id}/` |
+| Students (own section) | `GET/POST students/`, `POST students/bulk-upload/`, `POST students/bulk-delete/`, `GET/PATCH/PUT/DELETE students/{id}/`, `PATCH/POST students/{id}/image/` |
+| Parents (own section) | `GET/POST parents/`, `POST parents/bulk-upload/`, `POST parents/bulk-delete/`, `GET/PATCH/PUT parents/{id}/`, `POST parents/{id}/reset-password/`, `DELETE parents/{id}/students/{student_id}/` |
 | Student attendance | faces (list/register/register-from-profile/delete), `POST attendance/verify/`, sessions list/create/detail, records edit **(DRAFT only)**, `POST .../lock/` (**no unlock**) |
 | Own attendance | `POST teacher-attendance/check-in/`, `POST teacher-attendance/check-out/`, `GET teacher-attendance/today/`, `GET teacher-attendance/records/` (own), `GET .../records/{id}/`, `GET teacher-attendance/settings/`, `GET teacher-attendance/summary/` (own) |
 | Notifications | `GET/POST notifications/` (to parents of own section only), `GET/DELETE notifications/{id}/`, `GET notifications/{id}/recipients/`, inbox |
@@ -183,6 +183,13 @@ Creates the school and its admin user. Both start **INACTIVE**; no email is sent
 - **200** `School fetched/updated/deleted successfully.`
 - **400** `Validation failed.` · **404** `School not found.`
 
+#### POST `/schools/bulk-delete/` — SA
+Deletes several schools and their admin accounts.
+- **Request:** `{ "ids": [1, 2, 3] }` — 1 to 500 positive ids; duplicates are ignored.
+- Each item is deleted on its own, so one that cannot be deleted does not undo the others. Ids that do not exist **or are outside your scope** are both reported in `not_found`.
+- **200** `{n} schools deleted.` (plus ` {n} not found.` / ` {n} could not be deleted.`) → `{deleted: [ids], not_found: [ids], failed: [{id, reason}]}`. A school that still has academic years, teachers, students or other records is protected and lands in `failed`.
+- **400** `Validation failed.` → `{ids: [...]}` (e.g. "Select at least one item.", "No more than 500 items can be deleted at once.") · **403** SCH, T, P
+
 #### PATCH `/schools/{id}/status/` — SA
 Activating sets a new random password for the admin, activates them and **emails the credentials**. Deactivating disables the admin and sends a deactivation email.
 - **Request:** `{ "status": "ACTIVE" | "INACTIVE" }`
@@ -272,6 +279,13 @@ All rows are validated before anything is created.
   - `errors` = `{file:[...]}`, e.g. "Only CSV files are allowed.", "The CSV file is empty.", "Missing required column(s): ..."
   - or `{"<row>": {field:[...]}}`, e.g. "Email duplicated in this file, first seen on row N."
 
+#### POST `/teachers/bulk-delete/` — SA, SCH
+Deletes several teachers together with their logins. SCH reaches only their own school's teachers.
+- **Request:** `{ "ids": [1, 2, 3] }` — 1 to 500 positive ids; duplicates are ignored.
+- Each item is deleted on its own, so one that cannot be deleted does not undo the others. Ids that do not exist **or are outside your scope** are both reported in `not_found`.
+- **200** `{n} teachers deleted.` (plus ` {n} not found.` / ` {n} could not be deleted.`) → `{deleted: [ids], not_found: [ids], failed: [{id, reason}]}`
+- **400** `ids` errors (e.g. "Select at least one item.", "No more than 500 items can be deleted at once.") · **403** T, P
+
 #### GET / PATCH / PUT / DELETE `/teachers/{id}/`
 - PATCH body: profile fields (`class_section` is ignored here; use `/class-section/`)
 - **200** `Teacher fetched/updated/deleted successfully.`
@@ -327,6 +341,13 @@ Class-section rule:
 - **201** `{n} student(s) enrolled successfully.` → `{created, class_section, students}`
 - **400** `CSV validation failed. No students were enrolled.` → file errors or per-row errors
 
+#### POST `/students/bulk-delete/` — SA, SCH, T
+Deletes several students (and their stored photos). T reaches only their own section, SCH their own school.
+- **Request:** `{ "ids": [1, 2, 3] }` — 1 to 500 positive ids; duplicates are ignored.
+- Each item is deleted on its own, so one that cannot be deleted does not undo the others. Ids that do not exist **or are outside your scope** are both reported in `not_found`.
+- **200** `{n} students deleted.` (plus ` {n} not found.` / ` {n} could not be deleted.`) → `{deleted: [ids], not_found: [ids], failed: [{id, reason}]}`. A student with attendance records is protected and lands in `failed` ("The student has attendance or other records.").
+- **400** `ids` errors (e.g. "Select at least one item.", "No more than 500 items can be deleted at once.") · **403** P
+
 #### GET / PATCH / PUT / DELETE `/students/{id}/`
 - PATCH body: `name, student_id, roll_number`, plus `class_section` (admins only) to move a student
 - **200** `Student fetched/updated/deleted successfully.`
@@ -369,6 +390,13 @@ Adds parents from a CSV, one row per child, exactly like calling `POST /parents/
 - **Request:** `file` (.csv with columns `student_id, name, phone_number`; headers are case-insensitive), `school` (SA only, required). Max 1000 rows. Teachers can name only their class's students, School Admins their school's.
 - **201** `{c} parent(s) created, {l} child link(s) added to existing parents[, {u} already linked].` → `{created, linked, already_linked, rows: [{row, student_id, student_name, phone_number, parent, created, already_linked}], parents: [...parent incl. initial_password for new ones]}`
 - **400** `CSV validation failed. No parents were added.` → `{"file": [...]}` or per-row errors keyed by spreadsheet row number, e.g. `{"3": {"student_id": ["No student with this ID in your scope."]}}`. Row checks: invalid phone, unknown student, the same student + phone repeated, one phone given two different names, phone belonging to a staff account. Nothing is saved if any row fails; re-uploading the same file is safe (rows already linked are counted, not duplicated).
+
+#### POST `/parents/bulk-delete/` — SA, SCH, T
+Deletes several parent accounts. A parent can be linked to children in other sections or schools: the account is deleted only when **every** linked child is one you can see. Otherwise the account is kept and only your children are unlinked from it (reported in `unlinked`). SA always deletes.
+- **Request:** `{ "ids": [1, 2, 3] }` — 1 to 500 positive ids; duplicates are ignored.
+- Each item is deleted on its own, so one that cannot be deleted does not undo the others. Ids that do not exist **or are outside your scope** are both reported in `not_found`.
+- **200** `{n} parents deleted.` (plus ` {n} parents unlinked from your students (they have children outside your scope).` / ` {n} not found.` / ` {n} could not be deleted.`) → `{deleted: [ids], unlinked: [ids], not_found: [ids], failed: [{id, reason}]}`
+- **400** `ids` errors (e.g. "Select at least one item.", "No more than 500 items can be deleted at once.") · **403** P
 
 #### GET / PATCH / PUT `/parents/{id}/` — staff
 - PATCH body: `name`, `phone_number`

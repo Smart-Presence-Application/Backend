@@ -1,6 +1,7 @@
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics
 
+from common.bulk import BulkIdsSerializer, bulk_delete, bulk_delete_message
 from common.permissions import IsSchoolAdmin, IsSuperAdmin
 from common.responses import (
     success_response,
@@ -17,6 +18,7 @@ from .selectors import (
     get_school,
     get_school_by_admin,
     list_schools,
+    school_queryset,
 )
 
 from .serializers import (
@@ -149,6 +151,42 @@ class SchoolDetailAPIView(generics.GenericAPIView):
         )
         
         
+class SchoolBulkDeleteAPIView(generics.GenericAPIView):
+    """
+    Delete several schools, and their admin accounts, at once.
+
+    A school that still has academic years, teachers or students is
+    protected and reported as failed; the others are still deleted.
+    """
+
+    permission_classes = [IsSuperAdmin]
+    serializer_class = BulkIdsSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+
+        if not serializer.is_valid():
+            return error_response(
+                message="Validation failed.",
+                errors=serializer.errors,
+            )
+
+        result = bulk_delete(
+            queryset=school_queryset(),
+            ids=serializer.validated_data["ids"],
+            delete=lambda school: delete_school(school=school),
+            failed_reason=(
+                "The school still has academic years, teachers, "
+                "students or other records."
+            ),
+        )
+
+        return success_response(
+            message=bulk_delete_message(result, "school"),
+            data=result,
+        )
+
+
 class SchoolStatusAPIView(generics.GenericAPIView):
     permission_classes = [IsSuperAdmin]
     serializer_class = SchoolStatusSerializer

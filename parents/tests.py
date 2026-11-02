@@ -2,7 +2,7 @@ import re
 from datetime import timedelta
 
 from django.test import TestCase
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -28,7 +28,9 @@ def make_user(email, role):
     return user
 
 
-class ParentTests(TestCase):
+class ParentFixtures(TestCase):
+    """One school, two sections, a teacher of section A and a kid in each."""
+
     def setUp(self):
         self.super_admin = make_user("super@x.com", UserRole.SUPER_ADMIN)
         self.school_admin = make_user("admin@x.com", UserRole.SCHOOL_ADMIN)
@@ -88,6 +90,8 @@ class ParentTests(TestCase):
         )
         return client, response
 
+
+class ParentTests(ParentFixtures):
     def test_password_format(self):
         self.assertRegex(generate_parent_password("Atharva Raj Sinha"), r"^Atharva@\d{4}$")
         self.assertRegex(generate_parent_password("  riya "), r"^Riya@\d{4}$")
@@ -410,3 +414,85 @@ class ParentTests(TestCase):
         clash = self.upload(self.admin_client, "student_id,name,phone_number\nSTU2,Riya,9444444444\n")
         self.assertEqual(clash.status_code, 400)
         self.assertIn("phone_number", clash.data["errors"]["2"])
+
+
+class ParentBulkDeleteTests(ParentFixtures):
+    """
+    Bulk delete removes a parent's account only when the actor can see
+    every child linked to it; otherwise it just unlinks the actor's
+    children. Uses the shared fixtures (s1 in the teacher's section,
+    s2 in another section of the same school).
+    """
+
+    url = reverse_lazy("parents:parent-bulk-delete")
+
+    def shared_parent(self):
+        """One parent account linked to both s1 and s2."""
+        self.create_parent(self.teacher_client, student_id="STU1")
+        self.create_parent(self.admin_client, student_id="STU2")
+        return Parent.objects.get()
+
+    def test_teacher_only_unlinks_a_parent_with_children_elsewhere(self):
+        parent = self.shared_parent()
+
+        response = self.teacher_client.post(self.url, {"ids": [parent.pk]}, format="json")
+
+        self.assertEqual(response.status_code, 200, response.data)
+        data = response.data["data"]
+        self.assertEqual(data["deleted"], [])
+        self.assertEqual(data["unlinked"], [parent.pk])
+        self.assertEqual(list(parent.students.all()), [self.s2])
+        self.assertTrue(User.objects.filter(phone_number="9876543210").exists())
+
+    def test_admin_who_sees_every_child_deletes_the_account(self):
+        parent = self.shared_parent()
+
+        response = self.admin_client.post(self.url, {"ids": [parent.pk]}, format="json")
+
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data["data"]["deleted"], [parent.pk])
+        self.assertEqual(response.data["data"]["unlinked"], [])
+        self.assertEqual(response.data["message"], "1 parent deleted.")
+        self.assertFalse(Parent.objects.exists())
+        self.assertFalse(User.objects.filter(phone_number="9876543210").exists())
+
+    def test_teacher_deletes_parent_whose_children_are_all_theirs(self):
+        self.create_parent(self.teacher_client, student_id="STU1")
+        parent = Parent.objects.get()
+
+        response = self.teacher_client.post(
+            self.url, {"ids": [parent.pk, parent.pk, 999999]}, format="json",
+        )
+
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data["data"]["deleted"], [parent.pk])
+        self.assertEqual(response.data["data"]["not_found"], [999999])
+        self.assertFalse(Parent.objects.exists())
+
+    def test_parent_outside_scope_is_not_found(self):
+        self.create_parent(self.admin_client, student_id="STU2")
+        parent = Parent.objects.get()
+
+        response = self.teacher_client.post(self.url, {"ids": [parent.pk]}, format="json")
+
+        self.assertEqual(response.status_code, 200, response.data)
+        self.assertEqual(response.data["data"]["not_found"], [parent.pk])
+        self.assertTrue(Parent.objects.filter(pk=parent.pk).exists())
+
+    def test_super_admin_always_deletes(self):
+        parent = self.shared_parent()
+
+        response = self.super_client.post(self.url, {"ids": [parent.pk]}, format="json")
+
+        self.assertEqual(response.data["data"]["deleted"], [parent.pk])
+        self.assertFalse(Parent.objects.exists())
+
+    def test_parents_cannot_bulk_delete(self):
+        self.create_parent(self.teacher_client, student_id="STU1")
+        parent = Parent.objects.get()
+        parent_client = APIClient()
+        parent_client.force_authenticate(parent.user)
+
+        response = parent_client.post(self.url, {"ids": [parent.pk]}, format="json")
+
+        self.assertEqual(response.status_code, 403)

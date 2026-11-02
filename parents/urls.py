@@ -3,6 +3,7 @@ from django.urls import path
 from .views import (
     MyChildPhotoAPIView,
     MyChildrenAttendanceAPIView,
+    ParentBulkDeleteAPIView,
     ParentBulkUploadAPIView,
     MyNotificationsAPIView,
     MyNotificationsReadAPIView,
@@ -63,6 +64,11 @@ urlpatterns = [
         "bulk-upload/",
         ParentBulkUploadAPIView.as_view(),
         name="parent-bulk-upload",
+    ),
+    path(
+        "bulk-delete/",
+        ParentBulkDeleteAPIView.as_view(),
+        name="parent-bulk-delete",
     ),
     path(
         "<int:pk>/",

@@ -11,6 +11,7 @@ from accounts.models import User
 from attendance_student.models import AttendanceRecord, AttendanceSession
 from common.choices import UserRole
 from students.models import Student
+from students.selectors import get_students_visible_to, is_super_admin
 
 from notifications.push import send_push
 from .models import Parent, ParentNotification
@@ -191,6 +192,43 @@ def unlink_student(*, parent: Parent, student: Student) -> bool:
 
     return True
 
+
+@transaction.atomic
+def delete_parent(*, parent: Parent, actor) -> str:
+    """
+    Delete a parent on the actor's behalf.
+
+    A parent account can be shared by children in other sections or
+    schools. The account (and, through the cascade, the profile) is only
+    deleted when every linked child is one the actor can see; otherwise
+    just the actor's children are unlinked, leaving the account for the
+    others. Super Admins always delete.
+
+    Returns "deleted" or "unlinked".
+    """
+
+    visible_ids = get_students_visible_to(actor).values("pk")
+    linked = Student.objects.filter(parents=parent)
+
+    if is_super_admin(actor) or not linked.exclude(pk__in=visible_ids).exists():
+        phone_number = parent.user.phone_number
+        parent.user.delete()
+
+        logger.info("Parent %s deleted by user %s", phone_number, actor.pk)
+
+        return "deleted"
+
+    # Like unlink_student, but the parent keeps children outside the
+    # actor's scope, so the account is never left empty here.
+    parent.students.remove(*linked.filter(pk__in=visible_ids))
+
+    logger.info(
+        "Parent %s unlinked from user %s's students; kept for other children",
+        parent.user.phone_number,
+        actor.pk,
+    )
+
+    return "unlinked"
 
 def notify_attendance(
     *,

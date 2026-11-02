@@ -60,6 +60,7 @@ SPECIAL = {
     "verify": "Verified {noun}",
     "status": "Changed {noun} status",
     "bulk-status": "Changed status of several user accounts",
+    "bulk-delete": "Bulk deleted {noun}s",
     "bulk-upload": "Bulk uploaded {noun}s",
     "image": "Changed {noun} photo",
     "logo": "Changed school logo",

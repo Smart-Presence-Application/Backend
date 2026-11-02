@@ -10,6 +10,7 @@ from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 
+from common.bulk import BulkIdsSerializer, bulk_delete, bulk_delete_message
 from common.pagination import StandardResultsPagination
 from common.permissions import IsSuperAdmin, IsSuperOrSchoolAdmin, IsTeacher
 from common.responses import (
@@ -295,6 +296,35 @@ class TeacherDetailAPIView(
 
         return deleted_response("Teacher deleted successfully.")
 
+
+class TeacherBulkDeleteAPIView(generics.GenericAPIView):
+    """
+    Delete several teachers, and the logins they own, at once.
+
+    School Admins reach only their own school's teachers; any other id
+    is reported as not found.
+    """
+
+    permission_classes = [
+        IsAuthenticated,
+        IsSuperOrSchoolAdmin,
+    ]
+    serializer_class = BulkIdsSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        result = bulk_delete(
+            queryset=get_teachers_visible_to(request.user),
+            ids=serializer.validated_data["ids"],
+            delete=lambda teacher: delete_teacher(teacher=teacher),
+        )
+
+        return success_response(
+            bulk_delete_message(result, "teacher"),
+            result,
+        )
 
 class TeacherBulkUploadAPIView(
     TeacherBaseMixin,

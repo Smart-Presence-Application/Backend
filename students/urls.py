@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    StudentBulkDeleteAPIView,
     StudentBulkUploadAPIView,
     StudentDetailAPIView,
     StudentListCreateAPIView,
@@ -15,6 +16,11 @@ urlpatterns = [
         "bulk-upload/",
         StudentBulkUploadAPIView.as_view(),
         name="student-bulk-upload",
+    ),
+    path(
+        "bulk-delete/",
+        StudentBulkDeleteAPIView.as_view(),
+        name="student-bulk-delete",
     ),
     path(
         "promote/",

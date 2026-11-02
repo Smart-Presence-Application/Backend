@@ -19,6 +19,7 @@ from .services import maintenance_state
 OPEN_PATHS = (
     "/api/system/health/",
     "/api/system/status/",
+    "/api/system/services/",
     "/api/auth/login/",
     "/api/auth/logout/",
     "/api/auth/refresh/",

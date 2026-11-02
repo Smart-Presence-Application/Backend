@@ -2,6 +2,7 @@ from django.urls import path
 
 from .views import (
     TeacherAssignmentAPIView,
+    TeacherBulkDeleteAPIView,
     TeacherBulkUploadAPIView,
     TeacherDetailAPIView,
     TeacherListCreateAPIView,
@@ -23,6 +24,11 @@ urlpatterns = [
         "bulk-upload/",
         TeacherBulkUploadAPIView.as_view(),
         name="teacher-bulk-upload",
+    ),
+    path(
+        "bulk-delete/",
+        TeacherBulkDeleteAPIView.as_view(),
+        name="teacher-bulk-delete",
     ),
 
     path(

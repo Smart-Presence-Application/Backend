@@ -13,6 +13,7 @@ from rest_framework.permissions import IsAuthenticated
 from attendance_student.models import AIJobStatus
 from attendance_student.serializers import AIJobSerializer
 from attendance_student.services import start_student_photo_job
+from common.bulk import BulkIdsSerializer, bulk_delete, bulk_delete_message
 from common.choices import UserRole
 from common.ordering import NaturalOrderingFilter
 from common.pagination import StandardResultsPagination
@@ -536,3 +537,26 @@ class StudentPromoteAPIView(StudentBaseMixin, generics.GenericAPIView):
             f"{len(promoted)} student(s) moved to {to_class_section}.",
             {"promoted": len(promoted), "to_class_section": to_class_section.pk},
         )
+
+
+class StudentBulkDeleteAPIView(generics.GenericAPIView):
+    """
+    Delete several students at once. Each role reaches only the students
+    it can already see; any other id is reported as not found.
+    """
+
+    permission_classes = [IsAuthenticated, IsStudentManager]
+    serializer_class = BulkIdsSerializer
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        result = bulk_delete(
+            queryset=get_students_visible_to(request.user),
+            ids=serializer.validated_data["ids"],
+            delete=lambda student: delete_student(student=student),
+            failed_reason="The student has attendance or other records.",
+        )
+
+        return success_response(bulk_delete_message(result, "student"), result)
